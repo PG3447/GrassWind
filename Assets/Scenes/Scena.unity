@@ -269,7 +269,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e2a7fb60ff8dbdc43b20a18b0807d53a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GrassWind
-  strength: 0.2
 --- !u!1 &353181994
 GameObject:
   m_ObjectHideFlags: 0
@@ -282,6 +281,7 @@ GameObject:
   - component: {fileID: 353181996}
   - component: {fileID: 353181995}
   - component: {fileID: 353181998}
+  - component: {fileID: 353181999}
   m_Layer: 0
   m_Name: Terrain
   m_TagString: Untagged
@@ -372,13 +372,34 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 353181994}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 342fbfc91be788542bab3a780277f649, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TerrainGrassPosition
   terrain: {fileID: 353181996}
   detailLayer: 0
+--- !u!114 &353181999
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 353181994}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5d8de82fd73814ab325392f99d6b7c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::InstanceGrass
+  prefab: {fileID: 1253009059950623899, guid: 09bb748e1ae55a2498af2271fc922c8e, type: 3}
+  terrain: {fileID: 353181996}
+  countGrass: 2500
+  sizeW: 2
+  sizeH: 2
+  gridResolution: 8
+  mesh: {fileID: -5523277661179574252, guid: 915e9eb31a150c84293a7080e8dc4173, type: 3}
+  material: {fileID: 2100000, guid: 8439137311067d345aef18a43d578750, type: 2}
+  strength: 0.2
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -569,15 +590,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1884833089692345889, guid: 09bb748e1ae55a2498af2271fc922c8e, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -12.268599
+      value: 4.55
       objectReference: {fileID: 0}
     - target: {fileID: 1884833089692345889, guid: 09bb748e1ae55a2498af2271fc922c8e, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.0000078404
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1884833089692345889, guid: 09bb748e1ae55a2498af2271fc922c8e, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -44.1483
+      value: -10.02
       objectReference: {fileID: 0}
     - target: {fileID: 1884833089692345889, guid: 09bb748e1ae55a2498af2271fc922c8e, type: 3}
       propertyPath: m_LocalRotation.w

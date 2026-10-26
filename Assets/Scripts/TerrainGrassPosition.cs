@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class TerrainGrassPosition : MonoBehaviour
 {
-public Terrain terrain;
+    public Terrain terrain;
     public int detailLayer = 0;
 
     void Start()
@@ -25,42 +25,31 @@ public Terrain terrain;
             detailLayer
         );
 
-        int count = 0;
-
         for (int y = 0; y < data.detailHeight; y++)
         {
             for (int x = 0; x < data.detailWidth; x++)
             {
-                int density = details[y, x];
-
-                for (int i = 0; i < density; i++)
+                if (details[y, x] > 0)
                 {
-                    float normalizedX =
-                        (x + Random.value) / data.detailWidth;
+                    // Œrodek komórki siatki detali w lokalnych wspó³rzêdnych Terrain
+                    float localX = (x + 0.5f) / data.detailWidth * data.size.x;
+                    float localZ = (y + 0.5f) / data.detailHeight * data.size.z;
 
-                    float normalizedZ =
-                        (y + Random.value) / data.detailHeight;
+                    float worldX = terrain.transform.position.x + localX;
+                    float worldZ = terrain.transform.position.z + localZ;
 
-                    float worldX =
-                        terrain.transform.position.x +
-                        normalizedX * data.size.x;
-
-                    float worldZ =
-                        terrain.transform.position.z +
-                        normalizedZ * data.size.z;
-
-                    float worldY =
-                        terrain.SampleHeight(
-                            new Vector3(worldX, 0, worldZ)
-                        ) + terrain.transform.position.y;
+                    float worldY = terrain.SampleHeight(
+                        new Vector3(worldX, 0, worldZ)
+                    ) + terrain.transform.position.y;
 
                     Vector3 position = new Vector3(worldX, worldY, worldZ);
 
-                    count++;
+                    Debug.Log($"Detail: {position}, count: {details[y, x]}");
                 }
             }
         }
 
-        Debug.Log($"Liczba odczytanych instancji: {count}");
+
+
     }
 }
