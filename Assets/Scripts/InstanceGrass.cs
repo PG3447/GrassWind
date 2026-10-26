@@ -13,16 +13,16 @@ public class InstanceGrass : MonoBehaviour
     private int countGrass;
 
     [SerializeField]
-    private int sizeW;
+    private float sizeW;
 
     [SerializeField]
-    private int sizeH;
+    private float sizeH;
 
     [SerializeField]
     private int gridResolution; // to takie s z 3.2
 
     private int seed = 12347;
-    private int sizeSquare;
+    private float sizeSquare;
 
     private Vector2[] windData;
     private Texture2D windTexture; // posiada wektory predkosc wiatru w danej komorce
@@ -86,21 +86,23 @@ public class InstanceGrass : MonoBehaviour
 
             Vector3 position = new Vector3(x + noiseX, 0f, z + noiseZ);
 
-            Vector2 indeksNaSiatce = new Vector2((int)((position.x - centerTerrain.x + side / 2f * spacing) / sizeW + 0.5f), (int)((position.z - centerTerrain.y + side / 2f * spacing) / sizeH + 0.5f));
-            Debug.Log("Indeks " +indeksNaSiatce + " pozycja " + position); 
+            //Vector2 indeksNaSiatce = new Vector2((int)((position.x - centerTerrain.x + side / 2f * spacing) / sizeW + 0.5f), (int)((position.z - centerTerrain.y + side / 2f * spacing) / sizeH + 0.5f));
+            //Debug.Log("Indeks " +indeksNaSiatce + " pozycja " + position); 
 
             position.y = terrain.SampleHeight(position) + terrain.transform.position.y;
-            float rotationY = Random.Range(0f, 360f);
-            matrices[i] = Matrix4x4.TRS(position, Quaternion.Euler(0f, rotationY, 0f), Vector3.one);
+            float rotationY = Mathf.PerlinNoise(position.x * 0.3f + 200f, position.z * 0.3f + 200f) * 60f + Random.Range(-15f, 15f);
+
+            float n = Mathf.PerlinNoise(position.x * 0.5f, position.z * 0.5f) * 0.7f + Mathf.PerlinNoise(position.x * 3f + 50f, position.z * 3f + 50f) * 0.3f;
+
+            float h = Mathf.Lerp(0.5f, 1.4f, n);
+
+            matrices[i] = Matrix4x4.TRS(position, Quaternion.Euler(0f, rotationY, 0f), new Vector3(1f, h, 1f));
 
             //Instantiate(prefab, position, Quaternion.identity);
         }
 
         Shader.SetGlobalVector("_CenterTerrain", centerTerrain);
-        Shader.SetGlobalFloat("_Side", side);
-        Shader.SetGlobalFloat("_Spacing", spacing);
-        Shader.SetGlobalVector("_SizeWSizeH", new Vector2(sizeW, sizeH));
-        Shader.SetGlobalTexture("_WindTexture", windTexture);
+
     }
 
     void Update()
@@ -140,6 +142,11 @@ public class InstanceGrass : MonoBehaviour
         windTexture.Apply(false);
 
         Shader.SetGlobalFloat("_ExternalForce", strength);
+        Shader.SetGlobalFloat("_Side", side);
+        Shader.SetGlobalFloat("_Spacing", spacing);
+        Shader.SetGlobalFloat("_GridResolution", gridResolution);
+        Shader.SetGlobalVector("_SizeWSizeH", new Vector2(sizeW, sizeH));
+        Shader.SetGlobalTexture("_WindTexture", windTexture);
 
 
         Graphics.RenderMeshInstanced(renderParams, mesh, 0, matrices);   
