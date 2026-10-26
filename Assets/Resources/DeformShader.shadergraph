@@ -101,20 +101,6 @@
         {
             "m_OutputSlot": {
                 "m_Node": {
-                    "m_Id": "a886d6f47adc4bfe99326786f2130736"
-                },
-                "m_SlotId": 6
-            },
-            "m_InputSlot": {
-                "m_Node": {
-                    "m_Id": "c1d0604e5a3149a68ffd1cd81c9390eb"
-                },
-                "m_SlotId": 0
-            }
-        },
-        {
-            "m_OutputSlot": {
-                "m_Node": {
                     "m_Id": "ac6c688d061247cf9410034c16be4e43"
                 },
                 "m_SlotId": 0
@@ -229,13 +215,13 @@
     "m_RefNameGeneratedByDisplayName": "_Side",
     "m_DefaultReferenceName": "_Side",
     "m_OverrideReferenceName": "",
-    "m_GeneratePropertyBlock": true,
+    "m_GeneratePropertyBlock": false,
     "m_UseCustomSlotLabel": false,
     "m_CustomSlotLabel": "",
     "m_DismissedVersion": 0,
     "m_Precision": 0,
-    "overrideHLSLDeclaration": false,
-    "hlslDeclarationOverride": 0,
+    "overrideHLSLDeclaration": true,
+    "hlslDeclarationOverride": 1,
     "m_Hidden": false,
     "m_PerRendererData": false,
     "m_customAttributes": [],
@@ -336,13 +322,13 @@
     "m_RefNameGeneratedByDisplayName": "_Spacing",
     "m_DefaultReferenceName": "_Spacing",
     "m_OverrideReferenceName": "",
-    "m_GeneratePropertyBlock": true,
+    "m_GeneratePropertyBlock": false,
     "m_UseCustomSlotLabel": false,
     "m_CustomSlotLabel": "",
     "m_DismissedVersion": 0,
     "m_Precision": 0,
-    "overrideHLSLDeclaration": false,
-    "hlslDeclarationOverride": 0,
+    "overrideHLSLDeclaration": true,
+    "hlslDeclarationOverride": 1,
     "m_Hidden": false,
     "m_PerRendererData": false,
     "m_customAttributes": [],
@@ -572,13 +558,13 @@
     "m_RefNameGeneratedByDisplayName": "_WindTexture",
     "m_DefaultReferenceName": "_WindTexture",
     "m_OverrideReferenceName": "",
-    "m_GeneratePropertyBlock": true,
+    "m_GeneratePropertyBlock": false,
     "m_UseCustomSlotLabel": false,
     "m_CustomSlotLabel": "",
     "m_DismissedVersion": 0,
     "m_Precision": 0,
-    "overrideHLSLDeclaration": false,
-    "hlslDeclarationOverride": 0,
+    "overrideHLSLDeclaration": true,
+    "hlslDeclarationOverride": 1,
     "m_Hidden": false,
     "m_PerRendererData": false,
     "m_customAttributes": [],
@@ -747,10 +733,10 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": -493.9999694824219,
-            "y": -36.66664505004883,
-            "width": 236.0,
-            "height": 191.9999237060547
+            "x": -494.66668701171877,
+            "y": -36.666683197021487,
+            "width": 235.99996948242188,
+            "height": 192.00003051757813
         }
     },
     "m_Slots": [
@@ -791,7 +777,7 @@
     "m_FunctionName": "Grass",
     "m_FunctionSource": "",
     "m_FunctionSourceUsePragmas": true,
-    "m_FunctionBody": "//Vector2 indeksNaSiatce = new Vector2((int)((position.x - centerTerrain.x + side / 2f * spacing) / sizeW + 0.5f), (int)((position.z - centerTerrain.y + side / 2f * spacing) / sizeH + 0.5f));\r\nfloat wyr =  _Side / 2 * _Spacing;\nfloat2 index = floor(float2((PositionWorld.x - _CenterTerrain.x + wyr) / _SizeWSizeH.x + 0.5, (PositionWorld.z - _CenterTerrain.y + wyr) / _SizeWSizeH.y + 0.5));\n//int2 cell = clamp((int2)index, 0, int2(8, 8) - 1);\nfloat2 wind = _WindTexture.Load(int3(index.x, index.y, 0)).rg;\nWindOut = float3(index.x, index.y, 1.0);\n\nfloat y2 = Position.y * Position.y;\nfloat3 position = float3(Position.x, Position.y - k1 * y2, Position.z + k2 * y2);\n\nfloat3 dir = float3(wind.x, 1.0, 1.0);\nfloat y2b = position.y * position.y;\r\nfloat3 T = _ExternalForce * float3(dir.x * y2b, -length(dir) * y2b, -dir.y * y2b);\n//T = mul((float3x3)unity_WorldToObject, T);\nT = TransformWorldToObjectDir(T, false);\n//float3x3 m = (float3x3)GetObjectToWorldMatrix();\n//T = mul(T, m);\n\r\nPositionOut = position + (1 - lambda) * T;\r\n"
+    "m_FunctionBody": "//Vector2 indeksNaSiatce = new Vector2((int)((position.x - centerTerrain.x + side / 2f * spacing) / sizeW + 0.5f), (int)((position.z - centerTerrain.y + side / 2f * spacing) / sizeH + 0.5f));\r\nfloat wyr =  _Side / 2 * _Spacing;\nfloat2 index = floor(float2((PositionWorld.x - _CenterTerrain.x + wyr) / _SizeWSizeH.x + 0.5, (PositionWorld.z - _CenterTerrain.y + wyr) / _SizeWSizeH.y + 0.5));\nint2 cell = clamp((int2)index, 0, int2(8, 8) - 1);\nfloat2 wind = _WindTexture.Load(int3(cell.x, cell.y, 0)).rg;\nWindOut = float3(cell.x * 10, cell.y * 10, 1.0);\n\nfloat y2 = Position.y * Position.y;\nfloat3 position = float3(Position.x, Position.y - k1 * y2, Position.z + k2 * y2);\n\n//float3 dir = float3(wind.x, wind.y, 1.0);\nfloat y2b = position.y * position.y;\r\nfloat3 T = _ExternalForce * float3(wind.x * y2b, -length(wind) * y2b, -wind.y * y2b);\n//T = mul((float3x3)unity_WorldToObject, T);\nT = TransformWorldToObjectDir(T, false);\n//float3x3 m = (float3x3)GetObjectToWorldMatrix();\n//T = mul(T, m);\n\r\nPositionOut = position + (1 - lambda) * T;\r\n"
 }
 
 {
@@ -876,13 +862,13 @@
     "m_RefNameGeneratedByDisplayName": "_SizeWSizeH",
     "m_DefaultReferenceName": "_SizeWSizeH",
     "m_OverrideReferenceName": "",
-    "m_GeneratePropertyBlock": true,
+    "m_GeneratePropertyBlock": false,
     "m_UseCustomSlotLabel": false,
     "m_CustomSlotLabel": "",
     "m_DismissedVersion": 0,
     "m_Precision": 0,
-    "overrideHLSLDeclaration": false,
-    "hlslDeclarationOverride": 0,
+    "overrideHLSLDeclaration": true,
+    "hlslDeclarationOverride": 1,
     "m_Hidden": false,
     "m_PerRendererData": false,
     "m_customAttributes": [],
@@ -1222,13 +1208,13 @@
     "m_RefNameGeneratedByDisplayName": "_CenterTerrain",
     "m_DefaultReferenceName": "_CenterTerrain",
     "m_OverrideReferenceName": "",
-    "m_GeneratePropertyBlock": true,
+    "m_GeneratePropertyBlock": false,
     "m_UseCustomSlotLabel": false,
     "m_CustomSlotLabel": "",
     "m_DismissedVersion": 0,
     "m_Precision": 0,
-    "overrideHLSLDeclaration": false,
-    "hlslDeclarationOverride": 0,
+    "overrideHLSLDeclaration": true,
+    "hlslDeclarationOverride": 1,
     "m_Hidden": false,
     "m_PerRendererData": false,
     "m_customAttributes": [],

@@ -105,16 +105,37 @@ public class InstanceGrass : MonoBehaviour
 
     void Update()
     {
-        Vector2 dir = new Vector2(1f, 0.3f).normalized;
         float t = Time.time * 0.5f;
 
         for (int z = 0; z < gridResolution; z++)
+        {
             for (int x = 0; x < gridResolution; x++)
             {
-                float n = Mathf.InverseLerp(0.25f, 0.75f, Mathf.PerlinNoise(x * 0.1f - t + 1000f, z * 0.1f));
-                float strength = Mathf.Lerp(0.5f, 2f, n);   // 0.5..2.0
+                float noise = Mathf.PerlinNoise(
+                    x * 0.1f + t,
+                    z * 0.1f
+                );
+
+                // Kierunek od 0 do 360 stopni
+                float angle = noise * Mathf.PI * 2f;
+
+                Vector2 dir = new Vector2(
+                    Mathf.Cos(angle),
+                    Mathf.Sin(angle)
+                );
+
+                // Si³a wiatru
+                float n = Mathf.InverseLerp(
+                    0.25f,
+                    0.75f,
+                    Mathf.PerlinNoise(x * 0.1f - t + 1000f, z * 0.1f)
+                );
+
+                float strength = Mathf.Lerp(0.5f, 2f, n);
+
                 windData[z * gridResolution + x] = dir * strength;
             }
+        }
         windTexture.SetPixelData(windData, 0);
         windTexture.Apply(false);
 
