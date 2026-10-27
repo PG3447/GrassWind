@@ -113,26 +113,13 @@ public class InstanceGrass : MonoBehaviour
         {
             for (int x = 0; x < gridResolution; x++)
             {
-                float noise = Mathf.PerlinNoise(
-                    x * 0.1f + t,
-                    z * 0.1f
-                );
+                float noise = Mathf.PerlinNoise(x * 0.1f + t, z * 0.1f);
 
-                // Kierunek od 0 do 360 stopni
                 float angle = noise * Mathf.PI * 2f;
 
-                Vector2 dir = new Vector2(
-                    Mathf.Cos(angle),
-                    Mathf.Sin(angle)
-                );
+                Vector2 dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
 
-                // Si³a wiatru
-                float n = Mathf.InverseLerp(
-                    0.25f,
-                    0.75f,
-                    Mathf.PerlinNoise(x * 0.1f - t + 1000f, z * 0.1f)
-                );
-
+                float n = Mathf.InverseLerp(0.25f, 0.75f, Mathf.PerlinNoise(x * 0.1f - t + 1000f, z * 0.1f));
                 float strength = Mathf.Lerp(0.5f, 2f, n);
 
                 windData[z * gridResolution + x] = dir * strength;
