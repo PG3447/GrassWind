@@ -4,7 +4,7 @@ public class WindFluidSim : MonoBehaviour
 {
     [SerializeField] private ComputeShader compute;
 
-    [Header("Parametry ze sprawozdania")]
+    [Header("Parametry")]
     [Range(10f, 100f)] public float vorticity = 50f; 
     [Range(0f, 5f)] public float dissipation = 0.2f;
     [Range(1, 60)] public int pressureIterations = 20;
