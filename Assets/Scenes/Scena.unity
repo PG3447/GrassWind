@@ -282,6 +282,8 @@ GameObject:
   - component: {fileID: 353181995}
   - component: {fileID: 353181998}
   - component: {fileID: 353181999}
+  - component: {fileID: 353182001}
+  - component: {fileID: 353182000}
   m_Layer: 0
   m_Name: Terrain
   m_TagString: Untagged
@@ -397,9 +399,49 @@ MonoBehaviour:
   sizeW: 0.7
   sizeH: 0.7
   gridResolution: 40
+  fluid: {fileID: 353182001}
   mesh: {fileID: -5523277661179574252, guid: 915e9eb31a150c84293a7080e8dc4173, type: 3}
   material: {fileID: 2100000, guid: 8439137311067d345aef18a43d578750, type: 2}
   strength: 0.4
+  k1: 0.05
+  k2: 0.1
+  elasticity: 0.2
+--- !u!114 &353182000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 353181994}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71ea004dd173b854485b9465acb0eca0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WindControlPanel
+  grass: {fileID: 353181999}
+  fluid: {fileID: 353182001}
+  toggleKey: 282
+  cellSizeRange: {x: 0.1, y: 10}
+--- !u!114 &353182001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 353181994}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f0e5f76212dcf5d408ca65f13c492f0d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WindFluidSim
+  compute: {fileID: 7200000, guid: d8e555105ba733a48bf0418dece96b74, type: 3}
+  vorticity: 50
+  dissipation: 0.2
+  pressureIterations: 20
+  advectionScale: 20
+  forceStrength: 5
+  pressureDecay: 0.8
+  maxSpeed: 2
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
