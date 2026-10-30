@@ -19,7 +19,10 @@ public class InstanceGrass : MonoBehaviour
     private float sizeH;
 
     [SerializeField]
-    private int gridResolution; // to takie s z 3.2
+    private int gridResolution;
+
+    [SerializeField]
+    private WindFluidSim fluid;
 
     private int seed = 12347;
     private float sizeSquare;
@@ -38,6 +41,14 @@ public class InstanceGrass : MonoBehaviour
 
     //Dane do wyslania na GPU
     //pozycje posiada
+    public float k1 = 0.05f;
+    public float k2 = 0.1f;
+    public float elasticity = 0.2f;
+
+    public float SizeW { get => sizeW; set => sizeW = value; }
+    public float SizeH { get => sizeH; set => sizeH = value; }
+    public int GridResolution => gridResolution;
+
     private Vector2 centerTerrain;
     private int side;
     private float spacing;
@@ -55,7 +66,14 @@ public class InstanceGrass : MonoBehaviour
             worldBounds = new Bounds(terrain.transform.position + terrain.terrainData.size / 2f, terrain.terrainData.size)
         };
 
+        InitWind();
+    }
+
+    private void InitWind()
+    {
         sizeSquare = gridResolution * Mathf.Max(sizeW, sizeH);
+
+        if (windTexture != null) Destroy(windTexture);
 
         windTexture = new Texture2D(gridResolution, gridResolution, TextureFormat.RGFloat, false)
         {
@@ -64,10 +82,25 @@ public class InstanceGrass : MonoBehaviour
         };
 
         windData = new Vector2[gridResolution * gridResolution];
+
+        fluid.Init(gridResolution);
+    }
+
+    public void ApplyLayout(int newGridResolution)
+    {
+        gridResolution = Mathf.Clamp(newGridResolution, 10, 1000);
+        InitWind();
+        BuildGrass();
     }
 
     void Start()
     {
+        BuildGrass();
+    }
+
+    private void BuildGrass()
+    {
+        random = new System.Random(seed);
 
         centerTerrain = new Vector2(terrain.transform.position.x + terrain.terrainData.size.x / 2f, terrain.transform.position.z + terrain.terrainData.size.z / 2f);
 
@@ -102,7 +135,6 @@ public class InstanceGrass : MonoBehaviour
         }
 
         Shader.SetGlobalVector("_CenterTerrain", centerTerrain);
-
     }
 
     void Update()
@@ -128,13 +160,18 @@ public class InstanceGrass : MonoBehaviour
         windTexture.SetPixelData(windData, 0);
         windTexture.Apply(false);
 
+        fluid.Step(windTexture, Time.deltaTime);
+
         Shader.SetGlobalFloat("_ExternalForce", strength);
         Shader.SetGlobalFloat("_Side", side);
         Shader.SetGlobalFloat("_Spacing", spacing);
         Shader.SetGlobalFloat("_GridResolution", gridResolution);
         Shader.SetGlobalVector("_SizeWSizeH", new Vector2(sizeW, sizeH));
-        Shader.SetGlobalTexture("_WindTexture", windTexture);
+        Shader.SetGlobalTexture("_WindTexture", fluid.Velocity);
 
+        Shader.SetGlobalFloat("_K1", k1);
+        Shader.SetGlobalFloat("_K2", k2);
+        Shader.SetGlobalFloat("_Elasticity", elasticity);
 
         Graphics.RenderMeshInstanced(renderParams, mesh, 0, matrices);   
     }
