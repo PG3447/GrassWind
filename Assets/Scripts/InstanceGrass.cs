@@ -3,6 +3,8 @@ using UnityEngine.Rendering;
 
 public class InstanceGrass : MonoBehaviour
 {
+    public enum WindSource { Arrows, Perlin }
+
     [SerializeField]
     private GameObject prefab;
 
@@ -24,11 +26,16 @@ public class InstanceGrass : MonoBehaviour
     [SerializeField]
     private WindFluidSim fluid;
 
+    [SerializeField]
+    private WindArrowSystem arrows;
+
+    public WindSource windSource = WindSource.Arrows;
+
     private int seed = 12347;
     private float sizeSquare;
 
     private Vector2[] windData;
-    private Texture2D windTexture; // posiada wektory predkosc wiatru w danej komorce
+    private Texture2D windTexture;
     private System.Random random;
 
     private Matrix4x4[] matrices;
@@ -45,9 +52,12 @@ public class InstanceGrass : MonoBehaviour
     public float k2 = 0.1f;
     public float elasticity = 0.2f;
 
-    public float SizeW { get => sizeW; set => sizeW = value; }
-    public float SizeH { get => sizeH; set => sizeH = value; }
+    public float SizeW => sizeW;
+    public float SizeH => sizeH;
     public int GridResolution => gridResolution;
+    public float CellSize => Mathf.Max(sizeW, sizeH);
+    public Vector3 TerrainSize => terrain.terrainData.size;
+    public WindArrowSystem Arrows => arrows;
 
     private Vector2 centerTerrain;
     private int side;
@@ -57,6 +67,11 @@ public class InstanceGrass : MonoBehaviour
 
     private void Awake()
     {
+        if (fluid == null) fluid = GetComponent<WindFluidSim>();
+        if (arrows == null) arrows = FindFirstObjectByType<WindArrowSystem>();
+        if (arrows == null)
+            arrows = new GameObject("WindArrows").AddComponent<WindArrowSystem>();
+
         random = new System.Random(seed);
         renderParams = new RenderParams(material)
         {
@@ -86,9 +101,11 @@ public class InstanceGrass : MonoBehaviour
         fluid.Init(gridResolution);
     }
 
-    public void ApplyLayout(int newGridResolution)
+    public void ApplyLayout(int newGridResolution, float newW, float newH)
     {
         gridResolution = Mathf.Clamp(newGridResolution, 10, 1000);
+        sizeW = newW;
+        sizeH = newH;
         InitWind();
         BuildGrass();
     }
@@ -137,30 +154,47 @@ public class InstanceGrass : MonoBehaviour
         Shader.SetGlobalVector("_CenterTerrain", centerTerrain);
     }
 
+    public Vector2 WorldToCell(Vector3 world)
+    {
+        float half = sizeSquare / 2f;
+        return new Vector2((world.x - centerTerrain.x + half) / sizeW + 0.5f,
+                           (world.z - centerTerrain.y + half) / sizeH + 0.5f);
+    }
+
     void Update()
     {
-        float t = Time.time * 0.5f;
+        float dt = Time.deltaTime;
 
-        for (int z = 0; z < gridResolution; z++)
+        if (windSource == WindSource.Perlin)
         {
-            for (int x = 0; x < gridResolution; x++)
+            float t = Time.time * 0.5f;
+
+            for (int z = 0; z < gridResolution; z++)
             {
-                float noise = Mathf.PerlinNoise(x * 0.1f + t, z * 0.1f);
+                for (int x = 0; x < gridResolution; x++)
+                {
+                    float noise = Mathf.PerlinNoise(x * 0.1f + t, z * 0.1f);
 
-                float angle = noise * Mathf.PI * 2f;
+                    float angle = noise * Mathf.PI * 2f;
 
-                Vector2 dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+                    Vector2 dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
 
-                float n = Mathf.InverseLerp(0.25f, 0.75f, Mathf.PerlinNoise(x * 0.1f - t + 1000f, z * 0.1f));
-                float strength = Mathf.Lerp(0.5f, 2f, n);
+                    float n = Mathf.InverseLerp(0.25f, 0.75f, Mathf.PerlinNoise(x * 0.1f - t + 1000f, z * 0.1f));
+                    float windSpeed = Mathf.Lerp(0.5f, 2f, n);
 
-                windData[z * gridResolution + x] = dir * strength;
+                    windData[z * gridResolution + x] = dir * windSpeed;
+                }
             }
-        }
-        windTexture.SetPixelData(windData, 0);
-        windTexture.Apply(false);
+            windTexture.SetPixelData(windData, 0);
+            windTexture.Apply(false);
 
-        fluid.Step(windTexture, Time.deltaTime);
+            fluid.Step(windTexture, dt);
+        }
+        else
+        {
+            if (arrows != null) arrows.Inject(this, fluid, dt);
+            fluid.Step(null, dt);
+        }
 
         Shader.SetGlobalFloat("_ExternalForce", strength);
         Shader.SetGlobalFloat("_Side", side);
@@ -173,6 +207,7 @@ public class InstanceGrass : MonoBehaviour
         Shader.SetGlobalFloat("_K2", k2);
         Shader.SetGlobalFloat("_Elasticity", elasticity);
 
-        Graphics.RenderMeshInstanced(renderParams, mesh, 0, matrices);   
+        Graphics.RenderMeshInstanced(renderParams, mesh, 0, matrices);
     }
+
 }

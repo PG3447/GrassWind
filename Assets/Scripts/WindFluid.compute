@@ -7,6 +7,8 @@
 #pragma kernel Pressure
 #pragma kernel Gradient
 #pragma kernel Advect
+#pragma kernel Splat
+#pragma kernel Visualize
 
 int N;
 float dt;
@@ -16,6 +18,11 @@ float advectionScale;
 float forceStrength;
 float pressureDecay;
 float maxSpeed;
+float2 segA;
+float2 segB;
+float segRadius;
+float segStrength;
+float segFlipY;
 
 Texture2D<float2> VelIn;
 Texture2D<float2> ForceTex;
@@ -24,29 +31,35 @@ Texture2D<float>  DivIn;
 Texture2D<float>  PresIn;
 
 RWTexture2D<float2> VelOut;
-RWTexture2D<float>  CurlOut;
-RWTexture2D<float>  DivOut;
-RWTexture2D<float>  PresOut;
+RWTexture2D<float> CurlOut;
+RWTexture2D<float> DivOut;
+RWTexture2D<float> PresOut;
+RWTexture2D<float4> VisOut;
 
 SamplerState sampler_linear_clamp;
 
-int2 Cl(int2 p) { return clamp(p, 0, N - 1); }
+int2 Cl(int2 p)
+{
+    return clamp(p, 0, N - 1);
+}
 
 [numthreads(8, 8, 1)]
 void Force(uint3 id : SV_DispatchThreadID)
 {
-    if (id.x >= (uint)N || id.y >= (uint)N) return;
+    if (id.x >= (uint) N || id.y >= (uint) N)
+        return;
     VelOut[id.xy] = VelIn[id.xy] + ForceTex[id.xy] * forceStrength * dt;
 }
 
 [numthreads(8, 8, 1)]
 void Curl(uint3 id : SV_DispatchThreadID)
 {
-    if (id.x >= (uint)N || id.y >= (uint)N) return;
+    if (id.x >= (uint) N || id.y >= (uint) N)
+        return;
     int2 p = id.xy;
     float L = VelIn[Cl(p + int2(-1, 0))].y;
-    float R = VelIn[Cl(p + int2( 1, 0))].y;
-    float T = VelIn[Cl(p + int2(0,  1))].x;
+    float R = VelIn[Cl(p + int2(1, 0))].y;
+    float T = VelIn[Cl(p + int2(0, 1))].x;
     float B = VelIn[Cl(p + int2(0, -1))].x;
     CurlOut[p] = 0.5 * (R - L - T + B);
 }
@@ -54,11 +67,12 @@ void Curl(uint3 id : SV_DispatchThreadID)
 [numthreads(8, 8, 1)]
 void Vorticity(uint3 id : SV_DispatchThreadID)
 {
-    if (id.x >= (uint)N || id.y >= (uint)N) return;
+    if (id.x >= (uint) N || id.y >= (uint) N)
+        return;
     int2 p = id.xy;
     float L = CurlIn[Cl(p + int2(-1, 0))];
-    float R = CurlIn[Cl(p + int2( 1, 0))];
-    float T = CurlIn[Cl(p + int2(0,  1))];
+    float R = CurlIn[Cl(p + int2(1, 0))];
+    float T = CurlIn[Cl(p + int2(0, 1))];
     float B = CurlIn[Cl(p + int2(0, -1))];
     float C = CurlIn[p];
 
@@ -73,11 +87,12 @@ void Vorticity(uint3 id : SV_DispatchThreadID)
 [numthreads(8, 8, 1)]
 void Divergence(uint3 id : SV_DispatchThreadID)
 {
-    if (id.x >= (uint)N || id.y >= (uint)N) return;
+    if (id.x >= (uint) N || id.y >= (uint) N)
+        return;
     int2 p = id.xy;
     float L = VelIn[Cl(p + int2(-1, 0))].x;
-    float R = VelIn[Cl(p + int2( 1, 0))].x;
-    float T = VelIn[Cl(p + int2(0,  1))].y;
+    float R = VelIn[Cl(p + int2(1, 0))].x;
+    float T = VelIn[Cl(p + int2(0, 1))].y;
     float B = VelIn[Cl(p + int2(0, -1))].y;
     DivOut[p] = 0.5 * (R - L + T - B);
 }
@@ -85,18 +100,20 @@ void Divergence(uint3 id : SV_DispatchThreadID)
 [numthreads(8, 8, 1)]
 void ScalePressure(uint3 id : SV_DispatchThreadID)
 {
-    if (id.x >= (uint)N || id.y >= (uint)N) return;
+    if (id.x >= (uint) N || id.y >= (uint) N)
+        return;
     PresOut[id.xy] = PresIn[id.xy] * pressureDecay;
 }
 
 [numthreads(8, 8, 1)]
 void Pressure(uint3 id : SV_DispatchThreadID)
 {
-    if (id.x >= (uint)N || id.y >= (uint)N) return;
+    if (id.x >= (uint) N || id.y >= (uint) N)
+        return;
     int2 p = id.xy;
     float L = PresIn[Cl(p + int2(-1, 0))];
-    float R = PresIn[Cl(p + int2( 1, 0))];
-    float T = PresIn[Cl(p + int2(0,  1))];
+    float R = PresIn[Cl(p + int2(1, 0))];
+    float T = PresIn[Cl(p + int2(0, 1))];
     float B = PresIn[Cl(p + int2(0, -1))];
     PresOut[p] = (L + R + T + B - DivIn[p]) * 0.25;
 }
@@ -104,11 +121,12 @@ void Pressure(uint3 id : SV_DispatchThreadID)
 [numthreads(8, 8, 1)]
 void Gradient(uint3 id : SV_DispatchThreadID)
 {
-    if (id.x >= (uint)N || id.y >= (uint)N) return;
+    if (id.x >= (uint) N || id.y >= (uint) N)
+        return;
     int2 p = id.xy;
     float L = PresIn[Cl(p + int2(-1, 0))];
-    float R = PresIn[Cl(p + int2( 1, 0))];
-    float T = PresIn[Cl(p + int2(0,  1))];
+    float R = PresIn[Cl(p + int2(1, 0))];
+    float T = PresIn[Cl(p + int2(0, 1))];
     float B = PresIn[Cl(p + int2(0, -1))];
     VelOut[p] = VelIn[p] - float2(R - L, T - B);
 }
@@ -116,13 +134,43 @@ void Gradient(uint3 id : SV_DispatchThreadID)
 [numthreads(8, 8, 1)]
 void Advect(uint3 id : SV_DispatchThreadID)
 {
-    if (id.x >= (uint)N || id.y >= (uint)N) return;
+    if (id.x >= (uint) N || id.y >= (uint) N)
+        return;
     int2 p = id.xy;
     float2 v = VelIn[p];
-    float2 uv = ((float2)p + 0.5 - v * dt * advectionScale) / (float)N;
+    float2 uv = ((float2) p + 0.5 - v * dt * advectionScale) / (float) N;
     float2 r = VelIn.SampleLevel(sampler_linear_clamp, uv, 0);
     float2 o = r / (1.0 + dissipation * dt);
     float m = length(o);
-    if (m > maxSpeed) o *= maxSpeed / m;
+    if (m > maxSpeed)
+        o *= maxSpeed / m;
     VelOut[p] = o;
+}
+
+[numthreads(8, 8, 1)]
+void Splat(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint) N || id.y >= (uint) N)
+        return;
+    float2 pc = (float2) id.xy + 0.5;
+    float2 ab = segB - segA;
+    float len2 = max(dot(ab, ab), 1e-6);
+    float t = saturate(dot(pc - segA, ab) / len2);
+    float d = length(pc - (segA + ab * t));
+    float k = saturate(1.0 - d / max(segRadius, 1e-3));
+    k = k * k * (3.0 - 2.0 * k);
+    float2 dir = ab * rsqrt(len2) * float2(1.0, segFlipY);
+    VelOut[id.xy] = VelIn[id.xy] + dir * segStrength * k * dt;
+}
+
+[numthreads(8, 8, 1)]
+void Visualize(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint) N || id.y >= (uint) N)
+        return;
+    float2 v = VelIn[id.xy];
+    float hue = atan2(v.y, v.x) / 6.2831853 + 0.5;
+    float3 rgb = saturate(abs(frac(hue + float3(0.0, 2.0 / 3.0, 1.0 / 3.0)) * 6.0 - 3.0) - 1.0);
+    float s = saturate(length(v) / max(maxSpeed, 1e-3));
+    VisOut[id.xy] = float4(rgb * s, 1.0);
 }
