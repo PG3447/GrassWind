@@ -22,7 +22,7 @@ float2 segA;
 float2 segB;
 float segRadius;
 float segStrength;
-float segFlipY;
+float2 segDir;
 
 Texture2D<float2> VelIn;
 Texture2D<float2> ForceTex;
@@ -159,7 +159,7 @@ void Splat(uint3 id : SV_DispatchThreadID)
     float d = length(pc - (segA + ab * t));
     float k = saturate(1.0 - d / max(segRadius, 1e-3));
     k = k * k * (3.0 - 2.0 * k);
-    float2 dir = ab * rsqrt(len2) * float2(1.0, segFlipY);
+    float2 dir = segDir;
     VelOut[id.xy] = VelIn[id.xy] + dir * segStrength * k * dt;
 }
 

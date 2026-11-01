@@ -70,7 +70,7 @@ public class InstanceGrass : MonoBehaviour
         if (fluid == null) fluid = GetComponent<WindFluidSim>();
         if (arrows == null) arrows = FindFirstObjectByType<WindArrowSystem>();
         if (arrows == null)
-            arrows = new GameObject("WindArrows").AddComponent<WindArrowSystem>();
+            Debug.LogWarning("InstanceGrass: brak WindArrowSystem");
 
         random = new System.Random(seed);
         renderParams = new RenderParams(material)

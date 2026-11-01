@@ -77,7 +77,7 @@ public class WindFluidSim : MonoBehaviour
         compute.Dispatch(kernel, groups, groups, 1);
     }
 
-    public void AddSegment(Vector2 a, Vector2 b, float radiusCells, float strength, float flipY, float dt)
+    public void AddSegment(Vector2 a, Vector2 b, float radiusCells, float strength, Vector2 dir, float dt)
     {
         dt = Mathf.Min(dt, 1f / 30f);
         compute.SetInt("N", n);
@@ -86,7 +86,7 @@ public class WindFluidSim : MonoBehaviour
         compute.SetVector("segB", b);
         compute.SetFloat("segRadius", radiusCells);
         compute.SetFloat("segStrength", strength);
-        compute.SetFloat("segFlipY", flipY);
+        compute.SetVector("segDir", dir);
         compute.SetTexture(kSplat, "VelIn", velA);
         compute.SetTexture(kSplat, "VelOut", velB);
         Dispatch(kSplat);
