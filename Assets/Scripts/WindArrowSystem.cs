@@ -5,9 +5,7 @@ public class WindArrowSystem : MonoBehaviour
 {
     [Range(0f, 2f)] public float globalMultiplier = 1f;
 
-    public bool swapAxes = false;
-    public bool invertX = false;
-    public bool invertZ = true;
+    public bool invertX = true;
 
     public float gizmoScale = 3f;
 
@@ -40,9 +38,7 @@ public class WindArrowSystem : MonoBehaviour
 
     private Vector2 MapDirection(Vector2 d)
     {
-        if (swapAxes) d = new Vector2(d.y, d.x);
         if (invertX) d.x = -d.x;
-        if (invertZ) d.y = -d.y;
         return d;
     }
 

@@ -67,9 +67,7 @@ public class WindControlPanel : MonoBehaviour
             if (arrows != null)
             {
                 arrows.globalMultiplier = Slider("mnoznik strzalek", arrows.globalMultiplier, 0f, 2f);
-                arrows.swapAxes = GUILayout.Toggle(arrows.swapAxes, "zamien osie X <-> Z");
                 arrows.invertX = GUILayout.Toggle(arrows.invertX, "odwroc kierunek w osi X");
-                arrows.invertZ = GUILayout.Toggle(arrows.invertZ, "odwroc kierunek w osi Z");
                 if (arrows.Nodes.Count == 0)
                     GUILayout.Label("Brak strzalek");
                 foreach (var node in arrows.Nodes)
