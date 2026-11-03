@@ -98,7 +98,7 @@ public class WindControlPanel : MonoBehaviour
         grass.k2 = Slider("k2 wychylenie Z", grass.k2, -K2Max, K2Max);
 
         GUILayout.Space(6);
-        GUILayout.Label("Siatka (pkt 3.1) - po zmianie kliknij Zastosuj", header);
+        GUILayout.Label("Siatka", header);
         pendingN = Mathf.RoundToInt(Slider("s rozmiar siatki", pendingN, GridMin, GridMax) / 10f) * 10;
         pendingN = Mathf.Clamp(pendingN, GridMin, GridMax);
 
