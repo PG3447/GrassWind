@@ -74,7 +74,6 @@ public class WindControlPanel : MonoBehaviour
                 {
                     if (node == null) continue;
                     GUILayout.Label(node.name);
-                    node.strength = Slider("   sila", node.strength, 0f, WindArrowNode.StrengthMax);
                     node.radiusCells = Slider("   zasieg (komorki)", node.radiusCells, WindArrowNode.RadiusMin, WindArrowNode.RadiusMax);
                 }
             }
