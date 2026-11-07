@@ -1,8 +1,26 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
+using UnityEngine.UIElements;
 
+//[ExecuteAlways]
 public class InstanceGrass : MonoBehaviour
 {
+    private static InstanceGrass _instance;
+
+    public static InstanceGrass instance
+    {
+        get
+        {
+            if (_instance == null)
+                _instance = FindFirstObjectByType<InstanceGrass>();
+            return _instance;
+        }
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() => _instance = null;
+
     public enum WindSource { Arrows, Perlin }
 
     [SerializeField]
@@ -11,22 +29,12 @@ public class InstanceGrass : MonoBehaviour
     [SerializeField]
     private Terrain terrain;
 
-    [SerializeField]
-    private int countGrass;
+    public int countGrass;
+    public float sizeW;
+    public float sizeH;
+    public int gridResolution;
 
-    [SerializeField]
-    private float sizeW;
-
-    [SerializeField]
-    private float sizeH;
-
-    [SerializeField]
-    private int gridResolution;
-
-    [SerializeField]
     private WindFluidSim fluid;
-
-    [SerializeField]
     private WindArrowSystem arrows;
 
     public WindSource windSource = WindSource.Arrows;
@@ -51,12 +59,6 @@ public class InstanceGrass : MonoBehaviour
     public float k1 = 0.05f;
     public float k2 = 0.1f;
     public float elasticity = 0.2f;
-
-    public float SizeW => sizeW;
-    public float SizeH => sizeH;
-    public int GridResolution => gridResolution;
-    public float CellSize => Mathf.Max(sizeW, sizeH);
-    public Vector3 TerrainSize => terrain.terrainData.size;
     public WindArrowSystem Arrows => arrows;
 
     private Vector2 centerTerrain;
@@ -67,8 +69,12 @@ public class InstanceGrass : MonoBehaviour
 
     private void Awake()
     {
-        if (fluid == null) fluid = GetComponent<WindFluidSim>();
-        if (arrows == null) arrows = FindFirstObjectByType<WindArrowSystem>();
+        if (fluid == null)
+            fluid = WindFluidSim.instance;
+
+        if (arrows == null)
+            arrows = WindArrowSystem.instance;
+
         if (arrows == null)
             Debug.LogWarning("InstanceGrass: brak WindArrowSystem");
 
@@ -82,6 +88,11 @@ public class InstanceGrass : MonoBehaviour
         };
 
         InitWind();
+    }
+
+    void Start()
+    {
+        BuildGrass();
     }
 
     private void InitWind()
@@ -101,17 +112,13 @@ public class InstanceGrass : MonoBehaviour
         fluid.Init(gridResolution);
     }
 
-    public void ApplyLayout(int newGridResolution, float newW, float newH)
+    public void ApplyLayout(int newCountGrass, int newGridResolution, float newW, float newH)
     {
+        countGrass = newCountGrass;
         gridResolution = Mathf.Clamp(newGridResolution, 10, 1000);
         sizeW = newW;
         sizeH = newH;
         InitWind();
-        BuildGrass();
-    }
-
-    void Start()
-    {
         BuildGrass();
     }
 
@@ -140,7 +147,7 @@ public class InstanceGrass : MonoBehaviour
             //Debug.Log("Indeks " +indeksNaSiatce + " pozycja " + position); 
 
             position.y = terrain.SampleHeight(position) + terrain.transform.position.y;
-            float rotationY = Mathf.PerlinNoise(position.x * 0.3f + 200f, position.z * 0.3f + 200f) * 60f + Random.Range(-15f, 15f);
+            float rotationY = Mathf.PerlinNoise(position.x * 0.3f + 200f, position.z * 0.3f + 200f) * 60f + Random.Range(-10f, 10f);
 
             float n = Mathf.PerlinNoise(position.x * 0.5f, position.z * 0.5f) * 0.7f + Mathf.PerlinNoise(position.x * 3f + 50f, position.z * 3f + 50f) * 0.3f;
 
@@ -150,15 +157,12 @@ public class InstanceGrass : MonoBehaviour
 
             //Instantiate(prefab, position, Quaternion.identity);
         }
-
         Shader.SetGlobalVector("_CenterTerrain", centerTerrain);
     }
 
     public Vector2 WorldToCell(Vector3 world)
     {
-        float half = sizeSquare / 2f;
-        return new Vector2((world.x - centerTerrain.x + half) / sizeW + 0.5f,
-                           (world.z - centerTerrain.y + half) / sizeH + 0.5f);
+        return new Vector2((int)((world.x - centerTerrain.x + side / 2f * spacing) / sizeW + 0.5f), (int)((world.z - centerTerrain.y + side / 2f * spacing) / sizeH + 0.5f));
     }
 
     void Update()
@@ -192,7 +196,8 @@ public class InstanceGrass : MonoBehaviour
         }
         else
         {
-            if (arrows != null) arrows.Inject(this, fluid, dt);
+            if (arrows != null) arrows.Inject(dt);
+            //MouseWind(dt);
             fluid.Step(null, dt);
         }
 

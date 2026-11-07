@@ -2,7 +2,21 @@ using UnityEngine;
 
 public class WindFluidSim : MonoBehaviour
 {
-    public const float VorticityMax = 10f;
+    private static WindFluidSim _instance;
+
+    public static WindFluidSim instance
+    {
+        get
+        {
+            if (_instance == null)
+                _instance = FindFirstObjectByType<WindFluidSim>();
+            return _instance;
+        }
+    }
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() => _instance = null;
+
+    public const float VorticityMax = 50f;
     public const float DissipationMin = 0.05f, DissipationMax = 5f;
     public const int IterationsMin = 5, IterationsMax = 50;
     public const float MaxSpeedMin = 0.5f, MaxSpeedMax = 10f;
@@ -11,21 +25,37 @@ public class WindFluidSim : MonoBehaviour
     [SerializeField] private ComputeShader compute;
 
     [Header("Parametry")]
-    [Range(0f, VorticityMax)] public float vorticity = 1f;
-    [Range(DissipationMin, DissipationMax)] public float dissipation = 1f;
-    [Range(IterationsMin, IterationsMax)] public int pressureIterations = 20;
-    [Range(0.1f, 30f)] public float advectionScale = 3f;
-    [Range(0f, ForceStrengthMax)] public float forceStrength = 1f;
-    [Range(0f, 1f)] public float pressureDecay = 0.8f;
-    [Range(MaxSpeedMin, MaxSpeedMax)] public float maxSpeed = 2f;
+    [Range(0f, VorticityMax)]
+    public float vorticity = 1f;
+    
+    [Range(DissipationMin, DissipationMax)]
+    public float dissipation = 1f;
+    
+    [Range(IterationsMin, IterationsMax)]
+    public int pressureIterations = 20;
+    
+    //[Range(0.1f, 30f)]
+    //public float advectionScale = 3f;
+    
+    [Range(0f, ForceStrengthMax)]
+    public float forceStrength = 1f;
+    
+    [Range(0f, 1f)]
+    public float pressureDecay = 0.0f;
+    
+    [Range(MaxSpeedMin, MaxSpeedMax)]
+    public float maxSpeed = 2f;
     public float AdvectionMax => 30f / maxSpeed;
 
     public RenderTexture Velocity => velA;
+
     public RenderTexture Preview => preview;
     public bool previewEnabled;
-    public int Size => n;
 
+    public int Size => n;
+    [SerializeField]
     private int n;
+    [SerializeField]
     private RenderTexture velA, velB, curl, div, presA, presB, preview;
     private int kForce, kCurl, kVort, kDiv, kScaleP, kPres, kGrad, kAdvect, kSplat, kVis;
 
@@ -79,7 +109,7 @@ public class WindFluidSim : MonoBehaviour
 
     public void AddSegment(Vector2 a, Vector2 b, float radiusCells, float strength, Vector2 dir, float dt)
     {
-        dt = Mathf.Min(dt, 1f / 30f);
+        dt = Mathf.Min(dt, 1f / 60f);
         compute.SetInt("N", n);
         compute.SetFloat("dt", dt);
         compute.SetVector("segA", a);
@@ -95,13 +125,13 @@ public class WindFluidSim : MonoBehaviour
 
     public void Step(Texture forceTex, float dt)
     {
-        dt = Mathf.Min(dt, 1f / 30f);
+        dt = Mathf.Min(dt, 1f / 60f);
 
-        compute.SetInt("N", n);
+        compute.SetInt("N", n); // gridResolution
         compute.SetFloat("dt", dt);
-        compute.SetFloat("vorticity", vorticity);
-        compute.SetFloat("dissipation", dissipation);
-        compute.SetFloat("advectionScale", Mathf.Min(advectionScale, AdvectionMax));
+        compute.SetFloat("vorticity", vorticity); // lambda
+        compute.SetFloat("dissipation", dissipation); // tlumienie
+        //compute.SetFloat("advectionScale", Mathf.Min(advectionScale, AdvectionMax));
         compute.SetFloat("forceStrength", forceStrength);
         compute.SetFloat("pressureDecay", pressureDecay);
         compute.SetFloat("maxSpeed", maxSpeed);
@@ -115,24 +145,31 @@ public class WindFluidSim : MonoBehaviour
             (velA, velB) = (velB, velA);
         }
 
+        //velA jest startowe
         compute.SetTexture(kCurl, "VelIn", velA);
         compute.SetTexture(kCurl, "CurlOut", curl);
         Dispatch(kCurl);
 
         compute.SetTexture(kVort, "VelIn", velA);
         compute.SetTexture(kVort, "CurlIn", curl);
-        compute.SetTexture(kVort, "VelOut", velB);
+        compute.SetTexture(kVort, "VelOut", velA);
         Dispatch(kVort);
-        (velA, velB) = (velB, velA);
 
         compute.SetTexture(kDiv, "VelIn", velA);
         compute.SetTexture(kDiv, "DivOut", div);
         Dispatch(kDiv);
 
-        compute.SetTexture(kScaleP, "PresIn", presA);
-        compute.SetTexture(kScaleP, "PresOut", presB);
-        Dispatch(kScaleP);
-        (presA, presB) = (presB, presA);
+        RenderTexture previous = RenderTexture.active;
+        RenderTexture.active = presA;
+
+        GL.Clear(false, true, Color.black);
+
+        RenderTexture.active = previous;
+
+        //compute.SetTexture(kScaleP, "PresIn", presA);
+        //compute.SetTexture(kScaleP, "PresOut", presA);
+        //Dispatch(kScaleP);
+        //(presA, presB) = (presB, presA);
 
         compute.SetTexture(kPres, "DivIn", div);
         for (int i = 0; i < pressureIterations; i++)
@@ -145,14 +182,12 @@ public class WindFluidSim : MonoBehaviour
 
         compute.SetTexture(kGrad, "VelIn", velA);
         compute.SetTexture(kGrad, "PresIn", presA);
-        compute.SetTexture(kGrad, "VelOut", velB);
+        compute.SetTexture(kGrad, "VelOut", velA);
         Dispatch(kGrad);
-        (velA, velB) = (velB, velA);
 
         compute.SetTexture(kAdvect, "VelIn", velA);
-        compute.SetTexture(kAdvect, "VelOut", velB);
+        compute.SetTexture(kAdvect, "VelOut", velA);
         Dispatch(kAdvect);
-        (velA, velB) = (velB, velA);
 
         if (previewEnabled)
         {

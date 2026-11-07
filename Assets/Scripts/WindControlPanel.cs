@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class WindControlPanel : MonoBehaviour
 {
@@ -7,29 +8,32 @@ public class WindControlPanel : MonoBehaviour
     private const float K1Max = 0.3f;
     private const float K2Max = 0.1f;
     private const int GridMin = 10, GridMax = 1000;
+    private const float procent = 1.25f;
 
-    [SerializeField] private InstanceGrass grass;
-    [SerializeField] private WindFluidSim fluid;
+    private InstanceGrass grass;
+    private WindFluidSim fluid;
     [SerializeField] private KeyCode toggleKey = KeyCode.F1;
+    private WindArrowSystem arrows;
 
     private bool visible = true;
-    private int pendingN;
+    private bool showPreview = false;
+    private int pendingN, pendingS;
     private float pendingW, pendingH;
     private Vector2 scroll;
     private Rect window;
     private GUIStyle header;
 
-    private void Awake()
-    {
-        if (grass == null) grass = GetComponent<InstanceGrass>();
-        if (fluid == null) fluid = GetComponent<WindFluidSim>();
-    }
 
     private void Start()
     {
-        pendingN = grass.GridResolution;
-        pendingW = grass.SizeW;
-        pendingH = grass.SizeH;
+        if (grass == null) grass = InstanceGrass.instance;
+        if (fluid == null) fluid = WindFluidSim.instance;
+
+        pendingN = grass.countGrass;
+        pendingS = grass.gridResolution;
+        pendingW = grass.sizeW;
+        pendingH = grass.sizeH;
+        arrows = grass.Arrows;
         window = new Rect(10, 10, 400, Mathf.Min(720f, Screen.height - 20f));
     }
 
@@ -45,7 +49,7 @@ public class WindControlPanel : MonoBehaviour
 
         window = GUILayout.Window(7731, window, Draw, "Wiatr i trawa");
     }
-
+ 
     private void Draw(int id)
     {
         header ??= new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold };
@@ -53,9 +57,7 @@ public class WindControlPanel : MonoBehaviour
 
         GUILayout.Label("Wiatr", header);
         if (GUILayout.Button($"Zrodlo: {grass.windSource}"))
-            grass.windSource = grass.windSource == InstanceGrass.WindSource.Arrows
-                ? InstanceGrass.WindSource.Perlin
-                : InstanceGrass.WindSource.Arrows;
+            grass.windSource = grass.windSource == InstanceGrass.WindSource.Arrows ? InstanceGrass.WindSource.Perlin: InstanceGrass.WindSource.Arrows;
 
         if (grass.windSource == InstanceGrass.WindSource.Perlin)
         {
@@ -63,32 +65,58 @@ public class WindControlPanel : MonoBehaviour
         }
         else
         {
-            WindArrowSystem arrows = grass.Arrows;
             if (arrows != null)
             {
+                arrows.createArrow = GUILayout.Toggle(arrows.createArrow, "Tworzenie strza³ki", "Button");
+
                 arrows.globalMultiplier = Slider("mnoznik strzalek", arrows.globalMultiplier, 0f, 2f);
                 arrows.invertX = GUILayout.Toggle(arrows.invertX, "odwroc kierunek w osi X");
                 if (arrows.Nodes.Count == 0)
                     GUILayout.Label("Brak strzalek");
+                WindArrowNode toDelete = null;
+
                 foreach (var node in arrows.Nodes)
                 {
                     if (node == null) continue;
-                    GUILayout.Label(node.name);
-                    node.radiusCells = Slider("   zasieg (komorki)", node.radiusCells, WindArrowNode.RadiusMin, WindArrowNode.RadiusMax);
+                    node.expanded = GUILayout.Toggle(node.expanded, (node.expanded ? "v " : "> ") + node.name, "Button");
+
+                    if (node.expanded)
+                    {
+                        node.strength = Slider("   sila ", node.strength, 0f, WindArrowNode.StrengthMax);
+                        node.radiusCells = Slider("  promien/zasieg (komorki)", node.radiusCells, WindArrowNode.RadiusMin, WindArrowNode.RadiusMax);
+                        if (GUILayout.Button("   Usun strzalke"))
+                            toDelete = node;
+
+                    }
                 }
+
+                if (toDelete != null)
+                    arrows.RemoveArrow(toDelete);
             }
             else
             {
                 GUILayout.Label("Brak WindArrowSystem na scenie");
             }
         }
+        GUILayout.Label("Ustawienia myszki", header);
+        arrows.mouseStrength = Slider("sila", arrows.mouseStrength, 0f, WindArrowNode.StrengthMax * 1.5f);
+        arrows.mouseRadius = Slider("promien", arrows.mouseRadius, WindArrowNode.RadiusMin, WindArrowNode.RadiusMax);
 
         GUILayout.Space(6);
         GUILayout.Label("Symulacja Wiatru", header);
         fluid.vorticity = Slider("lambda wirowosc", fluid.vorticity, 0f, WindFluidSim.VorticityMax);
         fluid.dissipation = Slider("lambda dysypacja", fluid.dissipation, WindFluidSim.DissipationMin, WindFluidSim.DissipationMax);
         fluid.pressureIterations = Mathf.RoundToInt(Slider("iteracje cisnienia", fluid.pressureIterations, WindFluidSim.IterationsMin, WindFluidSim.IterationsMax));
-        fluid.advectionScale = Slider("adwekcja (s)", fluid.advectionScale, 0.1f, fluid.AdvectionMax);
+        //fluid.advectionScale = Slider("adwekcja (s)", fluid.advectionScale, 0.1f, fluid.AdvectionMax);
+
+        GUILayout.Space(6);
+        showPreview = GUILayout.Toggle(showPreview, "Podglad wiatru", "Button");
+
+        if (showPreview && fluid.Preview != null)
+        {
+            Rect r = GUILayoutUtility.GetRect(256, 256, GUILayout.ExpandWidth(false));
+            GUI.DrawTexture(r, fluid.Preview, ScaleMode.ScaleToFit, false);
+        }
 
         GUILayout.Space(6);
         GUILayout.Label("Trawa", header);
@@ -99,18 +127,21 @@ public class WindControlPanel : MonoBehaviour
 
         GUILayout.Space(6);
         GUILayout.Label("Siatka", header);
-        pendingN = Mathf.RoundToInt(Slider("s rozmiar siatki", pendingN, GridMin, GridMax) / 10f) * 10;
-        pendingN = Mathf.Clamp(pendingN, GridMin, GridMax);
 
-        float ideal = grass.TerrainSize.x / pendingN;
-        pendingW = Slider("w szer. komorki", pendingW, ideal * 0.25f, ideal * 4f);
-        pendingH = Slider("h wys. komorki", pendingH, ideal * 0.25f, ideal * 4f);
-        GUILayout.Label($"obszar siatki:");
 
-        if (GUILayout.Button("Dopasuj w, h do terenu"))
-            pendingW = pendingH = ideal;
+        pendingN = (int)Slider("n ilosc trawy", pendingN, 0, 200000);
+        pendingS = (int)Slider("s rozmiar siatki", pendingS, GridMin, GridMax);
+        pendingW = Slider("w szer. komorki", pendingW, Mathf.Max(grass.sizeW * 0.5f, pendingH / procent), Mathf.Min(grass.sizeW * 1.5f, pendingH * procent));
+        pendingH = Slider("h wys. komorki", pendingH, Mathf.Max(grass.sizeH * 0.5f, pendingW / procent), Mathf.Min(grass.sizeH * 1.5f, pendingW * procent));
+
         if (GUILayout.Button("Zastosuj uklad (s, w, h)"))
-            grass.ApplyLayout(pendingN, pendingW, pendingH);
+        {
+            grass.ApplyLayout(pendingN, pendingS, pendingW, pendingH);
+            pendingN = grass.countGrass;
+            pendingS = grass.gridResolution;
+            pendingW = grass.sizeW;
+            pendingH = grass.sizeH;
+        }
 
 
         GUILayout.EndScrollView();

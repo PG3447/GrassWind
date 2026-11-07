@@ -12,9 +12,9 @@
 
 int N;
 float dt;
-float vorticity;    
-float dissipation;   
-float advectionScale; 
+float vorticity;
+float dissipation;
+//float advectionScale;
 float forceStrength;
 float pressureDecay;
 float maxSpeed;
@@ -26,9 +26,9 @@ float2 segDir;
 
 Texture2D<float2> VelIn;
 Texture2D<float2> ForceTex;
-Texture2D<float>  CurlIn;
-Texture2D<float>  DivIn;
-Texture2D<float>  PresIn;
+Texture2D<float> CurlIn;
+Texture2D<float> DivIn;
+Texture2D<float> PresIn;
 
 RWTexture2D<float2> VelOut;
 RWTexture2D<float> CurlOut;
@@ -57,11 +57,18 @@ void Curl(uint3 id : SV_DispatchThreadID)
     if (id.x >= (uint) N || id.y >= (uint) N)
         return;
     int2 p = id.xy;
-    float L = VelIn[Cl(p + int2(-1, 0))].y;
+    
     float R = VelIn[Cl(p + int2(1, 0))].y;
+    float L = VelIn[Cl(p + int2(-1, 0))].y;
     float T = VelIn[Cl(p + int2(0, 1))].x;
     float B = VelIn[Cl(p + int2(0, -1))].x;
-    CurlOut[p] = 0.5 * (R - L - T + B);
+    
+    //CurlOut[p] = (R.x - L.x) + (T.y - B.y);
+    //CurlOut[p] = 0.5 * ((R.y - L.y) - (T.x - B.x));
+    //CurlOut[p] = 0.5 * (R.y - L.y - T.x + B.x);
+    //CurlOut[p] = 0.5 * (R.x - L.x - T.y + B.y);
+    //CurlOut[p] = 0.5 * (R - L - T + B);
+    CurlOut[p] = 0.5 * ((R - L) - (T - B));
 }
 
 [numthreads(8, 8, 1)]
@@ -70,18 +77,33 @@ void Vorticity(uint3 id : SV_DispatchThreadID)
     if (id.x >= (uint) N || id.y >= (uint) N)
         return;
     int2 p = id.xy;
-    float L = CurlIn[Cl(p + int2(-1, 0))];
-    float R = CurlIn[Cl(p + int2(1, 0))];
+    
+    //float L = CurlIn[Cl(p + int2(-1, 0))];
+    //float R = CurlIn[Cl(p + int2(1, 0))];
+    //float T = CurlIn[Cl(p + int2(0, 1))];
+    //float B = CurlIn[Cl(p + int2(0, -1))];
+    //float C = CurlIn[p];
+
+    //float2 f = 0.5 * float2(abs(T) - abs(B), abs(R) - abs(L));
+    //f /= length(f) + 1e-4;
+    //f *= vorticity * C;
+    //f.y *= -1.0;
+
+    //VelOut[p] = clamp(VelIn[p] + f * dt, -1000.0, 1000.0);
+    
     float T = CurlIn[Cl(p + int2(0, 1))];
     float B = CurlIn[Cl(p + int2(0, -1))];
+    float R = CurlIn[Cl(p + int2(1, 0))];
+    float L = CurlIn[Cl(p + int2(-1, 0))];
     float C = CurlIn[p];
 
-    float2 f = 0.5 * float2(abs(T) - abs(B), abs(R) - abs(L));
-    f /= length(f) + 1e-4;
-    f *= vorticity * C;
-    f.y *= -1.0;
+    float2 eta = 0.5 * float2(abs(R) - abs(L), abs(T) - abs(B));
 
-    VelOut[p] = clamp(VelIn[p] + f * dt, -1000.0, 1000.0);
+    float2 Ndir = eta / (length(eta) + 1e-5);
+
+    float2 f = vorticity * C * float2(Ndir.y, -Ndir.x);
+
+    VelOut[p] = VelIn[p] + f * dt;
 }
 
 [numthreads(8, 8, 1)]
@@ -90,13 +112,24 @@ void Divergence(uint3 id : SV_DispatchThreadID)
     if (id.x >= (uint) N || id.y >= (uint) N)
         return;
     int2 p = id.xy;
+    
+    //float L = VelIn[Cl(p + int2(-1, 0))].x;
+    //float R = VelIn[Cl(p + int2(1, 0))].x;
+    //float T = VelIn[Cl(p + int2(0, 1))].y;
+    //float B = VelIn[Cl(p + int2(0, -1))].y;
+    //DivOut[p] = 0.5 * (R - L + T - B);
+    
+
     float L = VelIn[Cl(p + int2(-1, 0))].x;
     float R = VelIn[Cl(p + int2(1, 0))].x;
+
     float T = VelIn[Cl(p + int2(0, 1))].y;
     float B = VelIn[Cl(p + int2(0, -1))].y;
-    DivOut[p] = 0.5 * (R - L + T - B);
+
+    DivOut[p] = (R - L + T - B) * 0.5;
 }
 
+//???
 [numthreads(8, 8, 1)]
 void ScalePressure(uint3 id : SV_DispatchThreadID)
 {
@@ -105,17 +138,33 @@ void ScalePressure(uint3 id : SV_DispatchThreadID)
     PresOut[id.xy] = PresIn[id.xy] * pressureDecay;
 }
 
+//poza siatka
+float P(int2 p)
+{
+    if (p.x < 0 || p.y < 0 || p.x >= N || p.y >= N)
+        return 0.0;
+    return PresIn[p];
+}
+
 [numthreads(8, 8, 1)]
 void Pressure(uint3 id : SV_DispatchThreadID)
 {
     if (id.x >= (uint) N || id.y >= (uint) N)
         return;
     int2 p = id.xy;
-    float L = PresIn[Cl(p + int2(-1, 0))];
-    float R = PresIn[Cl(p + int2(1, 0))];
-    float T = PresIn[Cl(p + int2(0, 1))];
-    float B = PresIn[Cl(p + int2(0, -1))];
-    PresOut[p] = (L + R + T + B - DivIn[p]) * 0.25;
+    
+    //float L = PresIn[Cl(p + int2(-1, 0))];
+    //float R = PresIn[Cl(p + int2(1, 0))];
+    //float T = PresIn[Cl(p + int2(0, 1))];
+    //float B = PresIn[Cl(p + int2(0, -1))];
+    //PresOut[p] = (L + R + T + B - DivIn[p]) * 0.25;
+    
+    float T = P(p + int2(0, 1));
+    float B = P(p + int2(0, -1));
+    float R = P(p + int2(1, 0));
+    float L = P(p + int2(-1, 0));
+    
+    PresOut[p] = (T + B + R + L - DivIn[p]) * 0.25;
 }
 
 [numthreads(8, 8, 1)]
@@ -124,11 +173,19 @@ void Gradient(uint3 id : SV_DispatchThreadID)
     if (id.x >= (uint) N || id.y >= (uint) N)
         return;
     int2 p = id.xy;
-    float L = PresIn[Cl(p + int2(-1, 0))];
-    float R = PresIn[Cl(p + int2(1, 0))];
-    float T = PresIn[Cl(p + int2(0, 1))];
-    float B = PresIn[Cl(p + int2(0, -1))];
-    VelOut[p] = VelIn[p] - float2(R - L, T - B);
+    
+    //float L = PresIn[Cl(p + int2(-1, 0))];
+    //float R = PresIn[Cl(p + int2(1, 0))];
+    //float T = PresIn[Cl(p + int2(0, 1))];
+    //float B = PresIn[Cl(p + int2(0, -1))];
+    //VelOut[p] = VelIn[p] - float2(R - L, T - B);
+    
+    float R = P(p + int2(1, 0));
+    float L = P(p + int2(-1, 0));
+    float T = P(p + int2(0, 1));
+    float B = P(p + int2(0, -1));
+    
+    VelOut[p] = VelIn[p] - float2(R - L, T - B) * 0.5;
 }
 
 [numthreads(8, 8, 1)]
@@ -137,14 +194,27 @@ void Advect(uint3 id : SV_DispatchThreadID)
     if (id.x >= (uint) N || id.y >= (uint) N)
         return;
     int2 p = id.xy;
-    float2 v = VelIn[p];
-    float2 uv = ((float2) p + 0.5 - v * dt * advectionScale) / (float) N;
-    float2 r = VelIn.SampleLevel(sampler_linear_clamp, uv, 0);
-    float2 o = r / (1.0 + dissipation * dt);
-    float m = length(o);
-    if (m > maxSpeed)
-        o *= maxSpeed / m;
-    VelOut[p] = o;
+    
+    //float2 v = VelIn[p];
+    //float2 uv = ((float2) p + 0.5 - v * dt * advectionScale) / (float) N;
+    //float2 r = VelIn.SampleLevel(sampler_linear_clamp, uv, 0);
+    //float2 o = r / (1.0 + dissipation * dt);
+    //float m = length(o);
+    //if (m > maxSpeed)
+    //    o *= maxSpeed / m;
+    
+    float2 alpha = (float2) p;
+    float2 alphaPrime = alpha - VelIn[p] * N * dt;
+    
+    float2 uv = (alphaPrime + 0.5) / N;
+    
+    float2 v = VelIn.SampleLevel(sampler_linear_clamp, uv, 0);
+    
+    bool inside = all(uv >= 0.0) && all(uv <= 1.0);
+    if (!inside)
+        v = 0;
+    
+    VelOut[p] = v / (1.0 + dissipation * dt);
 }
 
 [numthreads(8, 8, 1)]
@@ -152,13 +222,22 @@ void Splat(uint3 id : SV_DispatchThreadID)
 {
     if (id.x >= (uint) N || id.y >= (uint) N)
         return;
-    float2 pc = (float2) id.xy + 0.5;
+    //float2 pc = (float2) id.xy + 0.5;
+    //float2 ab = segB - segA;
+    //float len2 = max(dot(ab, ab), 1e-6);
+    //float t = saturate(dot(pc - segA, ab) / len2);
+    //float d = length(pc - (segA + ab * t));
+    //float k = saturate(1.0 - d / max(segRadius, 1e-3));
+    //k = k * k * (3.0 - 2.0 * k);
+    float2 uv = (id.xy + 0.5);
+
+
     float2 ab = segB - segA;
-    float len2 = max(dot(ab, ab), 1e-6);
-    float t = saturate(dot(pc - segA, ab) / len2);
-    float d = length(pc - (segA + ab * t));
-    float k = saturate(1.0 - d / max(segRadius, 1e-3));
-    k = k * k * (3.0 - 2.0 * k);
+    float t = saturate(dot(uv - segA, ab) / max(dot(ab, ab), 1e-8));
+    float2 d = uv - (segA + t * ab);
+
+    float k = exp(-dot(d, d) / segRadius);
+    
     float2 dir = segDir;
     VelOut[id.xy] = VelIn[id.xy] + dir * segStrength * k * dt;
 }
