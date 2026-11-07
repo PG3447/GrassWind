@@ -199,6 +199,7 @@ public class WindFluidSim : MonoBehaviour
 
     private void Release()
     {
+        if (_instance == this) _instance = null;
         foreach (var rt in new[] { velA, velB, curl, div, presA, presB, preview })
             if (rt != null) rt.Release();
     }

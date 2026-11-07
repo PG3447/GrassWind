@@ -215,4 +215,9 @@ public class InstanceGrass : MonoBehaviour
         Graphics.RenderMeshInstanced(renderParams, mesh, 0, matrices);
     }
 
+    void OnDestroy()
+    {
+        if (_instance == this) _instance = null;
+    }
+
 }
