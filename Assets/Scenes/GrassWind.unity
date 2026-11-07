@@ -93,7 +93,7 @@ LightmapSettings:
     m_ExportTrainingData: 0
     m_TrainingDataDestination: TrainingData
     m_LightProbeSampleCountMultiplier: 4
-  m_LightingDataAsset: {fileID: 20201, guid: 0000000000000000f000000000000000, type: 0}
+  m_LightingDataAsset: {fileID: 112000000, guid: 2b3c82af9dfe49f4e9c020c8863b7a4c, type: 2}
   m_LightingSettings: {fileID: 0}
 --- !u!196 &4
 NavMeshSettings:
@@ -497,7 +497,6 @@ MonoBehaviour:
   vorticity: 10
   dissipation: 0.2
   pressureIterations: 20
-  advectionScale: 20
   forceStrength: 5
   pressureDecay: 0.8
   maxSpeed: 2
@@ -929,6 +928,22 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 748557866391854414, guid: 09bb748e1ae55a2498af2271fc922c8e, type: 3}
+      propertyPath: m_CastShadows
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 748557866391854414, guid: 09bb748e1ae55a2498af2271fc922c8e, type: 3}
+      propertyPath: m_RayTracingMode
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 748557866391854414, guid: 09bb748e1ae55a2498af2271fc922c8e, type: 3}
+      propertyPath: m_LightProbeUsage
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 748557866391854414, guid: 09bb748e1ae55a2498af2271fc922c8e, type: 3}
+      propertyPath: m_StaticShadowCaster
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 748557866391854414, guid: 09bb748e1ae55a2498af2271fc922c8e, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
