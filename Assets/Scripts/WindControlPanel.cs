@@ -7,8 +7,9 @@ public class WindControlPanel : MonoBehaviour
     private const float FMax = 1f;
     private const float K1Max = 0.3f;
     private const float K2Max = 0.1f;
-    private const int GridMin = 10, GridMax = 1000;
+    private const int GridMin = 100, GridMax = 1000;
     private const float procent = 1.25f;
+    private const float CellMin = 0.03f, CellMax = 0.07f;
 
     private InstanceGrass grass;
     private WindFluidSim fluid;
@@ -67,10 +68,10 @@ public class WindControlPanel : MonoBehaviour
         {
             if (arrows != null)
             {
-                arrows.createArrow = GUILayout.Toggle(arrows.createArrow, "Tworzenie strza³ki", "Button");
+                arrows.createArrow = GUILayout.Toggle(arrows.createArrow, "Tworzenie strzalki", "Button");
 
-                arrows.globalMultiplier = Slider("mnoznik strzalek", arrows.globalMultiplier, 0f, 2f);
-                arrows.invertX = GUILayout.Toggle(arrows.invertX, "odwroc kierunek w osi X");
+                //arrows.globalMultiplier = Slider("mnoznik strzalek", arrows.globalMultiplier, 0f, 2f);
+                //arrows.invertX = GUILayout.Toggle(arrows.invertX, "odwroc kierunek w osi X");
                 if (arrows.Nodes.Count == 0)
                     GUILayout.Label("Brak strzalek");
                 WindArrowNode toDelete = null;
@@ -129,10 +130,24 @@ public class WindControlPanel : MonoBehaviour
         GUILayout.Label("Siatka", header);
 
 
-        pendingN = (int)Slider("n ilosc trawy", pendingN, 0, 200000);
+        pendingN = (int)Slider("n ilosc trawy", pendingN, 10000, 200000);
         pendingS = (int)Slider("s rozmiar siatki", pendingS, GridMin, GridMax);
-        pendingW = Slider("w szer. komorki", pendingW, Mathf.Max(grass.sizeW * 0.5f, pendingH / procent), Mathf.Min(grass.sizeW * 1.5f, pendingH * procent));
-        pendingH = Slider("h wys. komorki", pendingH, Mathf.Max(grass.sizeH * 0.5f, pendingW / procent), Mathf.Min(grass.sizeH * 1.5f, pendingW * procent));
+
+        float newW = Slider("w szer. komorki", pendingW, CellMin, CellMax);
+        float newH = Slider("h wys. komorki", pendingH, CellMin, CellMax);
+
+        if (newW != pendingW)
+        {
+            pendingW = newW;
+            pendingH = Mathf.Clamp(pendingH, pendingW / procent, pendingW * procent);
+            pendingH = Mathf.Clamp(pendingH, CellMin, CellMax);
+        }
+        else if (newH != pendingH)
+        {
+            pendingH = newH;
+            pendingW = Mathf.Clamp(pendingW, pendingH / procent, pendingH * procent);
+            pendingW = Mathf.Clamp(pendingW, CellMin, CellMax);
+        }
 
         if (GUILayout.Button("Zastosuj uklad (s, w, h)"))
         {
